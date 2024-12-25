@@ -57,6 +57,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSFaceIDUsageDescription</key>
+	<string>We need to use your Face ID to authenticate you</string>
 	<key>GoogleService-Info</key>
 	<dict>
 		<key>CLIENT_ID</key>

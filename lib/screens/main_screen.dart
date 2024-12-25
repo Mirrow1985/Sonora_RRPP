@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'pay_screen.dart';
 import 'events_screen.dart';
 import 'rewards_screen.dart';
@@ -15,6 +16,8 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   final User? user = FirebaseAuth.instance.currentUser;
+  String userName = 'User';
+  String userSurname = 'User';
 
   static const List<Widget> _widgetOptions = <Widget>[
     HomeContent(),  // Contenido de la pantalla de inicio
@@ -23,21 +26,30 @@ class _MainScreenState extends State<MainScreen> {
     RewardsScreen(),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserName();
+  }
+
+  Future<void> _fetchUserName() async {
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('Usuarios').doc(user!.uid).get();
+      setState(() {
+        userName = capitalize(userDoc['name'] ?? 'User');
+        userSurname = capitalize(userDoc['surname'] ?? 'User');
+      });
+    }
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  void _signOut() async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
-  }
-
-  String capitalize(String? s) {
-    if (s == null || s.isEmpty) {
+  String capitalize(String s) {
+    if (s.isEmpty) {
       return 'User';
     }
     return s[0].toUpperCase() + s.substring(1);
@@ -46,26 +58,43 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Welcome, ${capitalize(user?.displayName)}!'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.mail),
-            onPressed: () {
-              // Acción para el buzón
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-            },
-          ),
-        ],
-      ),
+      appBar: _selectedIndex == 0
+          ? AppBar(
+              automaticallyImplyLeading: false, // Eliminar el botón de ir hacia atrás
+              title: Row(
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        const TextSpan(text: 'Bienvenido, ', style: TextStyle(color: Colors.black, fontSize: 20)),
+                        TextSpan(
+                          text: '$userName $userSurname',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 20),
+                        ),
+                        const TextSpan(text: '!', style: TextStyle(color: Colors.black, fontSize: 20)),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.mail),
+                    onPressed: () {
+                      // Acción para el buzón
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SettingsScreen(userName: userName, userSurname: userSurname)),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            )
+          : null,
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[

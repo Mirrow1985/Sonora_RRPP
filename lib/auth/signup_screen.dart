@@ -1,15 +1,11 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'dart:developer';
-
-import 'package:auth_firebase/auth/auth_service.dart';
-import 'package:auth_firebase/auth/login_screen.dart';// Asegúrate de que esta línea esté presente
-import 'package:auth_firebase/widgets/button.dart';
-import 'package:auth_firebase/widgets/textfield.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Importa el paquete intl
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Importa Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:auth_firebase/auth/politica_de_seguridad.dart';
+import 'package:auth_firebase/auth/condiciones_de_uso.dart'; // Importa la nueva pantalla
+import 'package:flutter/gestures.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -19,202 +15,414 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  final _auth = AuthService();
+  final _auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
-
-  final _name = TextEditingController();
-  final _email = TextEditingController();
-  final _password = TextEditingController();
+  final _nameController = TextEditingController();
+  final _surnameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _dateController = TextEditingController();
-  DateTime? _selectedDate;
+  bool _obscureText = true;
+  bool _acceptNotifications = true;
+  bool _acceptTermsAndAge = false;
+  String? _selectedMonth;
+  String? _selectedDay;
+
+  final List<String> _months = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  List<String> _days = List.generate(31, (index) => (index + 1).toString());
 
   @override
   void dispose() {
-    super.dispose();
-    _name.dispose();
-    _email.dispose();
-    _password.dispose();
+    _nameController.dispose();
+    _surnameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     _dateController.dispose();
+    super.dispose();
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)), // 18 años antes de la fecha actual
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _dateController.text = DateFormat('yyyy-MM-dd').format(picked);
-      });
-    }
-  }
+  Future<void> _register() async {
+    if (_formKey.currentState!.validate() && _acceptTermsAndAge) {
+      try {
+        UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
 
-  Future<void> _signup() async {
-    try {
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        _email.text,
-        _password.text,
-      );
-
-      final User? user = userCredential.user;
-      if (user != null) {
-        await user.updateProfile(displayName: _name.text);
-        await user.sendEmailVerification();
-        log("Verification email sent");
-
-        // Guardar información adicional en Firestore
-        await FirebaseFirestore.instance.collection('Usuarios').doc(user.uid).set({
-          'name': _name.text,
-          'email': _email.text,
-          'dateOfBirth': _dateController.text,
+        await FirebaseFirestore.instance.collection('Usuarios').doc(userCredential.user!.uid).set({
+          'name': _nameController.text,
+          'surname': _surnameController.text,
+          'email': _emailController.text,
+          'birthday': _selectedMonth != null && _selectedDay != null ? '$_selectedDay $_selectedMonth' : null,
+          'acceptNotifications': _acceptNotifications,
+          'acceptTermsAndAge': _acceptTermsAndAge,
         });
 
-        // Show a dialog to inform the user to check their email
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Verify your email"),
-            content: const Text(
-                "A verification link has been sent to your email. Please verify your email to continue."),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  goToLogin(context);
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          ),
+        // Navegar a la pantalla principal o mostrar un mensaje de éxito
+        Navigator.pushReplacementNamed(context, '/main');
+      } catch (e) {
+        // Manejar errores
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error during registration: $e')),
         );
-      } else {
-        log("User credential is null");
       }
-    } catch (e) {
-      log("Error: $e");
-      String errorMessage;
-      if (e.toString().contains('firebase_auth/email-already-in-use')) {
-        errorMessage = 'The email address is already in use by another account.';
-      } else if (e.toString().contains('firebase_auth/invalid-email')) {
-        errorMessage = 'The email address is not valid.';
-      } else if (e.toString().contains('firebase_auth/weak-password')) {
-        errorMessage = 'The password provided is too weak.';
-      } else {
-        errorMessage = 'An unknown error occurred.';
-      }
-      // Handle error (e.g., show a snackbar or dialog with the error message)
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text("Error"),
-          content: Text(errorMessage),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        ),
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes aceptar las condiciones de uso y ser mayor de 18 años')),
       );
     }
+  }
+
+  void _updateDays(String? month) {
+    if (month == null) return;
+
+    int daysInMonth;
+    switch (month) {
+      case 'Febrero':
+        daysInMonth = 28; // No consideramos años bisiestos aquí
+        break;
+      case 'Abril':
+      case 'Junio':
+      case 'Septiembre':
+      case 'Noviembre':
+        daysInMonth = 30;
+        break;
+      default:
+        daysInMonth = 31;
+    }
+
+    setState(() {
+      _days = List.generate(daysInMonth, (index) => (index + 1).toString());
+      if (int.tryParse(_selectedDay ?? '0')! > daysInMonth) {
+        _selectedDay = null;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 25),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              const Spacer(),
-              const Text("Signup",
-                  style: TextStyle(fontSize: 40, fontWeight: FontWeight.w500)),
-              const SizedBox(
-                height: 50,
-              ),
-              CustomTextField(
-                hint: "Enter Name",
-                label: "Name",
-                controller: _name,
-              ),
-              const SizedBox(height: 20),
-              CustomTextField(
-                hint: "Enter Email",
-                label: "Email",
-                controller: _email,
-              ),
-              const SizedBox(height: 20),
-              CustomTextField(
-                hint: "Enter Password",
-                label: "Password",
-                isPassword: true,
-                controller: _password,
-                validator: (value) {
-                  if (value == null || value.length < 6) {
-                    return 'Password must be at least 6 characters';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 5),
-              const Text(
-                'Password must be at least 6 characters',
-                style: TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 20),
-              CustomTextField(
-                hint: "Select Date of Birthday",
-                label: "Date of Birthday",
-                controller: _dateController,
-                readOnly: true,
-                onTap: () => _selectDate(context),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select your date of birthday';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 5),
-              const Text(
-                'Enter your correct date, you will have surprises for your day',
-                style: TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 30),
-              CustomButton(
-                label: "Signup",
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _signup();
-                  }
-                },
-              ),
-              const SizedBox(height: 5),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Text("Already have an account? "),
-                InkWell(
-                  onTap: () => goToLogin(context),
-                  child: const Text("Login", style: TextStyle(color: Colors.red)),
-                )
-              ]),
-              const Spacer()
-            ],
+      appBar: AppBar(
+        title: const Text('Sign Up'),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Inscríbete',
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Already have an account? '),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, '/login');
+                      },
+                      child: const Text(
+                        'Sign In',
+                        style: TextStyle(color: Colors.green),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Datos personales',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nombre',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor ingresa tu nombre';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _surnameController,
+                  decoration: InputDecoration(
+                    labelText: 'Primer Apellido',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor ingresa tu apellido';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Correo Electrónico',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor ingresa tu correo electrónico';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'Contraseña',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureText ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureText = !_obscureText;
+                        });
+                      },
+                    ),
+                  ),
+                  obscureText: _obscureText,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor ingresa tu contraseña';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Cumpleaños',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Añade tu cumpleaños para que podamos felicitarte y regalarte un vale en tu día.',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedMonth,
+                        decoration: InputDecoration(
+                          labelText: 'Mes',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                          ),
+                        ),
+                        items: _months.map((String month) {
+                          return DropdownMenuItem<String>(
+                            value: month,
+                            child: Text(month),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedMonth = newValue;
+                            _updateDays(newValue);
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Por favor selecciona un mes';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedDay,
+                        decoration: InputDecoration(
+                          labelText: 'Día',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                          ),
+                        ),
+                        items: _days.map((String day) {
+                          return DropdownMenuItem<String>(
+                            value: day,
+                            child: Text(day),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedDay = newValue;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Por favor selecciona un día';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Siempre preparado para rockear',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Mantente al tanto. El e-mail es una gran forma de estar al día de las ofertas y novedades [...]',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: const Text(
+                        'Sí, quiero recibir información sobre ofertas y novedades exclusivas de La Cuneta Rock',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    Switch(
+                      value: _acceptNotifications,
+                      onChanged: (bool value) {
+                        setState(() {
+                          _acceptNotifications = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                RichText(
+                  text: TextSpan(
+                    text: 'Puedes anular tu suscripción en cualquier momento. Por favor, consulta nuestra ',
+                    style: const TextStyle(color: Colors.black, fontSize: 12),
+                    children: [
+                      TextSpan(
+                        text: 'Declaración de privacidad.',
+                        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
+                            );
+                          },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Condiciones de uso',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: const Text(
+                        'Acepto las condiciones de uso y la Declaración de Privacidad y declaro que soy mayor de 18 años',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    Switch(
+                      value: _acceptTermsAndAge,
+                      onChanged: (bool value) {
+                        setState(() {
+                          _acceptTermsAndAge = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CondicionesDeUsoScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'Condiciones de uso',
+                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Declaración de Privacidad',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Por favor, consulta nuestra Declaración de Privacidad para obtener más información sobre el uso que hacemos de tus datos.',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'Declaración de privacidad',
+                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                    backgroundColor: Colors.green, // Cambia el color según tu preferencia
+                  ),
+                  onPressed: _register,
+                  child: const Text(
+                    'Únete al programa de Rewards',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
-  goToLogin(BuildContext context) => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-
 }

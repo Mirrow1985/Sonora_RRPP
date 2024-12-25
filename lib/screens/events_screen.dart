@@ -7,10 +7,11 @@ class EventsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false, // Eliminar el botón de ir hacia atrás
         title: const Text('Eventos'),
       ),
       body: Center(
-        child: const Text('Próximos eventos del pub'),
+        child: Text('Contenido de la pantalla de eventos'),
       ),
     );
   }

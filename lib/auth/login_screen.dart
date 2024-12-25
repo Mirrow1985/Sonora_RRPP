@@ -18,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _auth = AuthService();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -27,6 +28,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       await _auth.signInWithEmailAndPassword(
         _email.text,
@@ -69,6 +74,10 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -98,10 +107,12 @@ class _LoginScreenState extends State<LoginScreen> {
               controller: _password,
             ),
             const SizedBox(height: 30),
-            CustomButton(
-              label: "Login",
-              onPressed: _login,
-            ),
+            _isLoading
+                ? const CircularProgressIndicator()
+                : CustomButton(
+                    label: "Login",
+                    onPressed: _login,
+                  ),
             const SizedBox(height: 5),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
