@@ -107,7 +107,7 @@ class _SignupScreenState extends State<SignupScreen> {
     int daysInMonth;
     switch (month) {
       case 'Febrero':
-        daysInMonth = 28; // No consideramos años bisiestos aquí
+        daysInMonth = 29; 
         break;
       case 'Abril':
       case 'Junio':
