@@ -30,6 +30,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isPasswordValid = false;
   String? _selectedMonth;
   String? _selectedDay;
+  bool _isLoading = false;
 
   final List<String> _months = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -68,7 +69,7 @@ class _SignupScreenState extends State<SignupScreen> {
     });
   }
 
-  Future<void> _register() async {
+  Future<void> register() async {
     if (_formKey.currentState!.validate() && _acceptTermsAndAge) {
       try {
         UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
@@ -124,6 +125,43 @@ class _SignupScreenState extends State<SignupScreen> {
         _selectedDay = null;
       }
     });
+  }
+
+  Future<void> _signup() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty || !_acceptTermsAndAge) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor completa todos los campos y acepta los términos')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+
+      User? user = userCredential.user;
+      if (user != null) {
+        await user.sendEmailVerification();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Se ha enviado un correo de verificación. Por favor verifica tu correo electrónico.')),
+        );
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -412,7 +450,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CondicionesDeUsoScreen()),
+                      MaterialPageRoute(builder: (context) => const CondicionesDeUso()),
                     );
                   },
                   child: const Text(
@@ -444,20 +482,22 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                    backgroundColor: Colors.green, // Cambia el color según tu preferencia
-                  ),
-                  onPressed: _register,
-                  child: const Text(
-                    'Únete al programa de Rewards',
-                    style: TextStyle(fontSize: 16, color: Colors.white),
-                  ),
-                ),
+                _isLoading
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.green, // Cambia el color según tu preferencia
+                        ),
+                        onPressed: _signup,
+                        child: const Text(
+                          'Únete al programa de Rewards',
+                          style: TextStyle(fontSize: 16, color: Colors.white),
+                        ),
+                      ),
               ],
             ),
           ),

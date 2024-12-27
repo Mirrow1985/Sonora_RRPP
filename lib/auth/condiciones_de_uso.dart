@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class CondicionesDeUsoScreen extends StatelessWidget {
-  const CondicionesDeUsoScreen({super.key});
+class CondicionesDeUso extends StatelessWidget {
+  const CondicionesDeUso({super.key});
 
   @override
   Widget build(BuildContext context) {

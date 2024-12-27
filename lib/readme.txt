@@ -5,7 +5,7 @@
 //
 //CONFIGURAR TAMBIEN LA APP, CUALQUIER OTRO IDIOMA CONFIGURADO QUE NO SEA ESPAÑOL QUE SEA POR DEFECTO INGLES,
 //GUARDAR EN GITHUB Y EMPEZAR A PERSONALIZARLA PARA LA CUNETA
-// creo que se ha desactivado la confirmacion del mail
+// Configurar mensajes al mail de firebase
 // Cuando inicias sesion con un mail que no exixste dice "ocurrio un error desconocido en vez de no se encuentra el usuario.
 //Custom appbar, hacerla bien y ajustar el boton de retroceso que tiene muy poco campo de accion
 //cambiar las especificaciones de la contraseña en firebase, cuando le das a olvide contraseña
