@@ -1,9 +1,7 @@
-import 'dart:developer';
-
-import 'package:auth_firebase/auth/auth_service.dart';
 import 'package:flutter/material.dart';
-import 'package:auth_firebase/widgets/button.dart';
-import 'package:auth_firebase/widgets/textfield.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:auth_firebase/widgets/custom_app_bar.dart';
+import 'package:auth_firebase/widgets/textfield.dart'; // Importar CustomTextField
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -13,74 +11,45 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _auth = AuthService();
-  final _email = TextEditingController();
+  final _emailController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
-    _email.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
   Future<void> _resetPassword() async {
-    if (_email.text.isEmpty) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Error"),
-            content: const Text("Please enter your email to reset password."),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-        );
-      }
+    if (_emailController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor ingresa tu correo electrónico')),
+      );
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      await _auth.sendPasswordResetEmail(_email.text);
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: _emailController.text);
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Password Reset"),
-            content: const Text("A password reset link has been sent to your email."),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Se ha enviado un correo para restablecer la contraseña')),
         );
       }
     } catch (e) {
-      log("Error: $e");
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Error"),
-            content: Text(e.toString()),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -88,29 +57,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Forgot Password"),
-      ),
+      appBar: const CustomAppBar(title: 'Restablecer contraseña'),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 25),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              "Reset Password",
-              style: TextStyle(fontSize: 40, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 50),
             CustomTextField(
-              hint: "Enter Email",
-              label: "Email",
-              controller: _email,
+              controller: _emailController,
+              labelText: 'Correo Electrónico', // Proporcionar el argumento requerido
+              keyboardType: TextInputType.emailAddress,
             ),
-            const SizedBox(height: 30),
-            CustomButton(
-              label: "Reset Password",
-              onPressed: _resetPassword,
-            ),
+            const SizedBox(height: 20),
+            _isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: _resetPassword,
+                    child: const Text('Restablecer contraseña'),
+                  ),
           ],
         ),
       ),

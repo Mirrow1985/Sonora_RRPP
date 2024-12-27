@@ -112,7 +112,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.card_giftcard),
-            label: 'Recompensas',
+            label: 'Rewards',
           ),
         ],
         currentIndex: _selectedIndex,

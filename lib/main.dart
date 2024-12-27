@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'screens/welcome_screen.dart';
-import 'auth/signup_screen.dart'; // Asegúrate de que esta importación sea correcta
+import 'auth/signup_screen.dart';
 import 'screens/main_screen.dart';
-import 'auth/login_screen.dart'; // Asegúrate de que esta importación sea correcta
-import 'auth/forgot_password_screen.dart'; // Importa la pantalla de restablecimiento de contraseña
+import 'auth/login_screen.dart';
+import 'auth/forgot_password_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
 
   if (kIsWeb) {
     await Firebase.initializeApp(

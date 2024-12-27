@@ -22,9 +22,12 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _dateController = TextEditingController();
+  final FocusNode _passwordFocusNode = FocusNode();
   bool _obscureText = true;
   bool _acceptNotifications = true;
   bool _acceptTermsAndAge = false;
+  bool _showPasswordRequirements = false;
+  bool _isPasswordValid = false;
   String? _selectedMonth;
   String? _selectedDay;
 
@@ -36,13 +39,33 @@ class _SignupScreenState extends State<SignupScreen> {
   List<String> _days = List.generate(31, (index) => (index + 1).toString());
 
   @override
+  void initState() {
+    super.initState();
+    _passwordFocusNode.addListener(() {
+      setState(() {
+        _showPasswordRequirements = _passwordFocusNode.hasFocus;
+      });
+    });
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _surnameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _dateController.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
+  }
+
+  void _validatePassword(String password) {
+    final passwordRegex = RegExp(
+      r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,25}$'
+    );
+    setState(() {
+      _isPasswordValid = passwordRegex.hasMatch(password);
+    });
   }
 
   Future<void> _register() async {
@@ -193,31 +216,48 @@ class _SignupScreenState extends State<SignupScreen> {
                   },
                 ),
                 const SizedBox(height: 20),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Contraseña',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureText ? Icons.visibility : Icons.visibility_off,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _passwordController,
+                      focusNode: _passwordFocusNode,
+                      decoration: InputDecoration(
+                        labelText: 'Contraseña',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureText ? Icons.visibility_off : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureText = !_obscureText;
+                            });
+                          },
+                        ),
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureText = !_obscureText;
-                        });
+                      obscureText: _obscureText,
+                      onChanged: (value) {
+                        _validatePassword(value);
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingresa tu contraseña';
+                        }
+                        if (!_isPasswordValid) {
+                          return 'La contraseña no cumple con los requisitos';
+                        }
+                        return null;
                       },
                     ),
-                  ),
-                  obscureText: _obscureText,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu contraseña';
-                    }
-                    return null;
-                  },
+                    const SizedBox(height: 10),
+                    Visibility(
+                      visible: _showPasswordRequirements,
+                      child: _buildPasswordRequirements(),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
                 const Text(
@@ -423,6 +463,34 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPasswordRequirements() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildRequirement("Entre 8 y 25 caracteres", _passwordController.text.length >= 8 && _passwordController.text.length <= 25),
+        _buildRequirement("Al menos un número", _passwordController.text.contains(RegExp(r'\d'))),
+        _buildRequirement("Al menos una letra mayúscula", _passwordController.text.contains(RegExp(r'[A-Z]'))),
+        _buildRequirement("Al menos una letra minúscula", _passwordController.text.contains(RegExp(r'[a-z]'))),
+        _buildRequirement("Al menos un carácter especial", _passwordController.text.contains(RegExp(r'[@$!%*?&]'))),
+        _buildRequirement("Sin espacios, tabulación ni saltos de línea", !_passwordController.text.contains(RegExp(r'\s'))),
+        _buildRequirement("Al menos un carácter especial permitido (!@# etc.)", _passwordController.text.contains(RegExp(r'[\W_]'))),
+      ],
+    );
+  }
+
+  Widget _buildRequirement(String requirement, bool met) {
+    return Row(
+      children: [
+        Icon(
+          met ? Icons.check : Icons.close,
+          color: met ? Colors.green : Colors.red,
+        ),
+        const SizedBox(width: 5),
+        Text(requirement),
+      ],
     );
   }
 }
