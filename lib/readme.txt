@@ -12,3 +12,4 @@
 //en restableccer contraseña despues de mensaje de que se ha enviado el mail, volver a pantalla de inicio
 //despues de elimiar cuenta mensaje, estas seguro y depues, tu cuenta ha sido eliminada con exito
 //inscribete "cumpleaños en negrita" y campos con lineas
+//Restablecer contraseña no funciona

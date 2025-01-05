@@ -5,6 +5,8 @@ plugins {
     id ("com.google.gms.google-services")
 }
 
+apply plugin: 'com.google.gms.google-services'
+
 def localProperties = new Properties()
 def localPropertiesFile = rootProject.file('local.properties')
 if (localPropertiesFile.exists()) {
@@ -80,3 +82,4 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
     implementation 'androidx.activity:activity-ktx:1.7.2'
 }
+    

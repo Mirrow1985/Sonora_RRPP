@@ -81,7 +81,7 @@ class _SignupScreenState extends State<SignupScreen> {
           'name': _nameController.text,
           'surname': _surnameController.text,
           'email': _emailController.text,
-          'birthday': _selectedMonth != null && _selectedDay != null ? '$_selectedDay $_selectedMonth' : null,
+          'birthday': '$_selectedDay $_selectedMonth',
           'acceptNotifications': _acceptNotifications,
           'acceptTermsAndAge': _acceptTermsAndAge,
         });
@@ -128,39 +128,47 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _signup() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty || !_acceptTermsAndAge) {
+    if (_formKey.currentState!.validate() && _selectedMonth != null && _selectedDay != null && _acceptTermsAndAge) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+
+        User? user = userCredential.user;
+        if (user != null) {
+          await user.sendEmailVerification();
+          await FirebaseFirestore.instance.collection('Usuarios').doc(user.uid).set({
+            'name': _nameController.text,
+            'surname': _surnameController.text,
+            'email': _emailController.text,
+            'birthday': '$_selectedDay $_selectedMonth',
+            'acceptNotifications': _acceptNotifications,
+            'acceptTermsAndAge': _acceptTermsAndAge,
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Se ha enviado un correo de verificación. Por favor verifica tu correo electrónico.')),
+          );
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor completa todos los campos y acepta los términos')),
       );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
-
-      User? user = userCredential.user;
-      if (user != null) {
-        await user.sendEmailVerification();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Se ha enviado un correo de verificación. Por favor verifica tu correo electrónico.')),
-        );
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
@@ -237,6 +245,11 @@ class _SignupScreenState extends State<SignupScreen> {
                   },
                 ),
                 const SizedBox(height: 20),
+                const Text(
+                  'Seguridad',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
@@ -300,7 +313,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 20),
                 const Text(
                   'Cumpleaños',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 5),
                 const Text(

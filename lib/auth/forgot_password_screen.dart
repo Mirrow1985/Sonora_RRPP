@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:auth_firebase/widgets/custom_app_bar.dart';
-import 'package:auth_firebase/widgets/textfield.dart'; // Importar CustomTextField
+import 'package:auth_firebase/widgets/textfield.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  State<ForgotPasswordScreen> createState() => ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   bool _isLoading = false;
 
@@ -21,28 +21,29 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _resetPassword() async {
-    if (_emailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor ingresa tu correo electrónico')),
-      );
-      return;
-    }
-
     setState(() {
       _isLoading = true;
     });
 
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: _emailController.text);
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: _emailController.text.trim());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Se ha enviado un correo para restablecer la contraseña')),
+          const SnackBar(content: Text('Correo de restablecimiento de contraseña enviado')),
         );
       }
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      if (e.code == 'user-not-found') {
+        errorMessage = 'No existe una cuenta con este correo electrónico.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'El formato del correo electrónico es incorrecto.';
+      } else {
+        errorMessage = 'Error: ${e.message}';
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text(errorMessage)),
         );
       }
     } finally {
@@ -65,15 +66,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           children: [
             CustomTextField(
               controller: _emailController,
-              labelText: 'Correo Electrónico', // Proporcionar el argumento requerido
+              labelText: 'Correo Electrónico',
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 20),
             _isLoading
-                ? const CircularProgressIndicator()
+                ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
                     onPressed: _resetPassword,
-                    child: const Text('Restablecer contraseña'),
+                    child: const Text('Enviar correo de restablecimiento'),
                   ),
           ],
         ),
