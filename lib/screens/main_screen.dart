@@ -63,16 +63,12 @@ class _MainScreenState extends State<MainScreen> {
               automaticallyImplyLeading: false, // Eliminar el botón de ir hacia atrás
               title: Row(
                 children: [
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        const TextSpan(text: 'Bienvenido, ', style: TextStyle(color: Colors.black, fontSize: 20)),
-                        TextSpan(
-                          text: '$userName $userSurname',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 20),
-                        ),
-                        const TextSpan(text: '!', style: TextStyle(color: Colors.black, fontSize: 20)),
-                      ],
+                  Flexible(
+                    child: Text(
+                      'Bienvenido, $userName!',
+                      style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
                   const Spacer(),

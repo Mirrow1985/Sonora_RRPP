@@ -1,10 +1,12 @@
 import 'dart:developer';
 import 'package:auth_firebase/auth/signup_screen.dart'; // Importar SignupScreen
 import 'package:auth_firebase/auth/forgot_password_screen.dart';
-import 'package:auth_firebase/screens/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:auth_firebase/widgets/custom_app_bar.dart';
+import 'package:flutter/services.dart';
+import 'package:local_auth/local_auth.dart'; // Importar LocalAuthentication
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,6 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
   bool _isLoading = false;
   bool _passwordVisible = false;
+  final _formKey = GlobalKey<FormState>();
+  final FlutterSecureStorage storage = const FlutterSecureStorage();
 
   @override
   void dispose() {
@@ -55,11 +59,11 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
+      // Configure biometric authentication
+      await _configureSecurity();
+
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainScreen()),
-        );
+        Navigator.pushReplacementNamed(context, '/main');
       }
     } catch (e) {
       log("Error: $e");
@@ -101,6 +105,24 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _configureSecurity() async {
+    final LocalAuthentication auth = LocalAuthentication();
+    bool canCheckBiometrics = await auth.canCheckBiometrics;
+
+    if (canCheckBiometrics) {
+      bool isAuthenticated = await auth.authenticate(
+        localizedReason: 'Please authenticate to configure security settings',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+        ),
+      );
+
+      if (isAuthenticated) {
+        await storage.write(key: 'useBiometrics', value: 'true');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,61 +130,76 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _email,
-                decoration: const InputDecoration(labelText: 'Correo Electrónico'),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _password,
-                obscureText: !_passwordVisible,
-                decoration: InputDecoration(
-                  labelText: 'Contraseña',
-                  hintText: 'Introduce tu contraseña',
-                  border: const UnderlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _passwordVisible ? Icons.visibility : Icons.visibility_off,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _passwordVisible = !_passwordVisible;
-                      });
-                    },
-                  ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _email,
+                  decoration: const InputDecoration(labelText: 'Correo Electrónico'),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor ingresa tu correo electrónico';
+                    }
+                    return null;
+                  },
                 ),
-              ),
-              const SizedBox(height: 20),
-              _isLoading
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                      onPressed: _login,
-                      child: const Text('Iniciar sesión'),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _password,
+                  obscureText: !_passwordVisible,
+                  decoration: InputDecoration(
+                    labelText: 'Contraseña',
+                    hintText: 'Introduce tu contraseña',
+                    border: const UnderlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _passwordVisible ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _passwordVisible = !_passwordVisible;
+                        });
+                      },
                     ),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
-                  );
-                },
-                child: const Text('¿Olvidaste tu contraseña?'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SignupScreen()),
-                  );
-                },
-                child: const Text('¿No tienes cuenta? Crear una cuenta'),
-              ),
-            ],
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor ingresa tu contraseña';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                _isLoading
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                        onPressed: _login,
+                        child: const Text('Iniciar sesión'),
+                      ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                    );
+                  },
+                  child: const Text('¿Olvidaste tu contraseña?'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SignupScreen()),
+                    );
+                  },
+                  child: const Text('¿No tienes cuenta? Crear una cuenta'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

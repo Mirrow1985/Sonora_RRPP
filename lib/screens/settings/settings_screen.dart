@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:logger/logger.dart'; // Importar el paquete logger
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'personal_data_screen.dart';
 import 'change_password_screen.dart';
 import 'payment_methods_screen.dart';
@@ -25,14 +26,16 @@ class SettingsScreen extends StatefulWidget {
 class SettingsScreenState extends State<SettingsScreen> {
   final LocalAuthentication auth = LocalAuthentication();
   final Logger logger = Logger(); // Crear una instancia de Logger
+  final FlutterSecureStorage storage = const FlutterSecureStorage();
   bool canCheckBiometrics = false;
-  bool isBiometricEnabled = false;
+  bool _isBiometricEnabled = false;
   bool isPushNotificationsEnabled = true; // Activado por defecto
 
   @override
   void initState() {
     super.initState();
     checkBiometrics();
+    _checkBiometricStatus();
   }
 
   Future<void> checkBiometrics() async {
@@ -42,21 +45,37 @@ class SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  Future<void> authenticate() async {
-    bool authenticated = false;
-    try {
-      authenticated = await auth.authenticate(
-        localizedReason: 'Please authenticate to enable biometric unlock',
-        options: const AuthenticationOptions(
-          biometricOnly: true,
-        ),
-      );
-    } catch (e, stackTrace) {
-      logger.e('Error during authentication', error: e, stackTrace: stackTrace); // Usar logger correctamente
-    }
+  Future<void> _checkBiometricStatus() async {
+    String? useBiometrics = await storage.read(key: 'useBiometrics');
     setState(() {
-      isBiometricEnabled = authenticated;
+      _isBiometricEnabled = useBiometrics == 'true';
     });
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      bool canCheckBiometrics = await auth.canCheckBiometrics;
+      if (canCheckBiometrics) {
+        bool isAuthenticated = await auth.authenticate(
+          localizedReason: 'Please authenticate to enable biometric access',
+          options: const AuthenticationOptions(
+            biometricOnly: true,
+          ),
+        );
+
+        if (isAuthenticated) {
+          await storage.write(key: 'useBiometrics', value: 'true');
+          setState(() {
+            _isBiometricEnabled = true;
+          });
+        }
+      }
+    } else {
+      await storage.delete(key: 'useBiometrics');
+      setState(() {
+        _isBiometricEnabled = false;
+      });
+    }
   }
 
   void _showNotificationDialog() {
@@ -209,15 +228,9 @@ class SettingsScreenState extends State<SettingsScreen> {
                       style: TextStyle(fontSize: 16),
                     ),
                     Switch(
-                      value: isBiometricEnabled,
+                      value: _isBiometricEnabled,
                       onChanged: (bool value) async {
-                        if (value) {
-                          await authenticate();
-                        } else {
-                          setState(() {
-                            isBiometricEnabled = false;
-                          });
-                        }
+                        _toggleBiometric(value);
                       },
                     ),
                   ],

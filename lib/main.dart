@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Importar firebase_auth
 import 'screens/welcome_screen.dart';
 import 'auth/signup_screen.dart';
 import 'screens/main_screen.dart';
@@ -36,13 +39,103 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const WelcomeScreen(), // Asegúrate de que esta sea la pantalla inicial correcta
+      home: const AuthWrapper(), // Usar AuthWrapper para manejar la lógica de autenticación
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/signup': (context) => const SignupScreen(), // Asegúrate de que esta ruta sea correcta
+        '/signup': (context) => const SignupScreen(),
         '/main': (context) => const MainScreen(),
-        '/forgot_password': (context) => const ForgotPasswordScreen(), // Agrega la ruta para restablecer contraseña
+        '/forgot_password': (context) => const ForgotPasswordScreen(),
+        '/welcome': (context) => const WelcomeScreen(), // Agregar la ruta para WelcomeScreen
       },
+    );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  AuthWrapperState createState() => AuthWrapperState();
+}
+
+class AuthWrapperState extends State<AuthWrapper> {
+  final LocalAuthentication auth = LocalAuthentication();
+  final FlutterSecureStorage storage = const FlutterSecureStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthentication();
+  }
+
+  Future<void> _checkAuthentication() async {
+    bool isBiometricEnabled = await _isBiometricEnabled();
+    bool isAuthenticated = false;
+
+    if (isBiometricEnabled) {
+      isAuthenticated = await _checkBiometricAuthentication();
+    }
+
+    if (!isAuthenticated) {
+      isAuthenticated = await _checkStoredCredentials();
+    }
+
+    if (isAuthenticated) {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/main');
+      }
+    } else {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/welcome');
+      }
+    }
+  }
+
+  Future<bool> _isBiometricEnabled() async {
+    String? useBiometrics = await storage.read(key: 'useBiometrics');
+    return useBiometrics == 'true';
+  }
+
+  Future<bool> _checkBiometricAuthentication() async {
+    bool canCheckBiometrics = await auth.canCheckBiometrics;
+
+    if (canCheckBiometrics) {
+      bool isAuthenticated = await auth.authenticate(
+        localizedReason: 'Please authenticate to access the app',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+        ),
+      );
+
+      return isAuthenticated;
+    }
+    return false;
+  }
+
+  Future<bool> _checkStoredCredentials() async {
+    String? email = await storage.read(key: 'email');
+    String? password = await storage.read(key: 'password');
+
+    if (email != null && password != null) {
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 }

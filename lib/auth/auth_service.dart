@@ -1,9 +1,11 @@
 // ignore_for_file: avoid_print
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'firestore_service.dart'; // Importa el FirestoreService
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final FirestoreService _firestoreService = FirestoreService(); // Instancia de FirestoreService
 
   User? get currentUser => _firebaseAuth.currentUser;
 
@@ -15,8 +17,31 @@ class AuthService {
     }
   }
 
-  Future<UserCredential> createUserWithEmailAndPassword(String email, String password) async {
-    return await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
+  Future<UserCredential> createUserWithEmailAndPassword(
+    String email,
+    String password,
+    String name, // Incluye el nombre como parámetro
+  ) async {
+    try {
+      // Crea el usuario en Firebase Auth
+      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Agrega el usuario a Firestore
+      await _firestoreService.createUser(
+        userCredential.user!.uid,
+        name,
+        email,
+      );
+
+      print("Usuario creado exitosamente.");
+      return userCredential;
+    } catch (e) {
+      print("Error al crear usuario: $e");
+      rethrow;
+    }
   }
 
   Future<UserCredential> signInWithEmailAndPassword({
@@ -38,18 +63,13 @@ class AuthService {
     User? user = _firebaseAuth.currentUser;
 
     if (user != null) {
-      // Reautenticar al usuario
       AuthCredential credential = EmailAuthProvider.credential(
         email: user.email!,
         password: currentPassword,
       );
 
       await user.reauthenticateWithCredential(credential);
-
-      // Cambiar la contraseña
       await user.updatePassword(newPassword);
-
-      // Hacer sign out del usuario
       await _firebaseAuth.signOut();
     }
   }
@@ -58,15 +78,12 @@ class AuthService {
     User? user = _firebaseAuth.currentUser;
 
     if (user != null) {
-      // Reautenticar al usuario
       AuthCredential credential = EmailAuthProvider.credential(
         email: user.email!,
         password: password,
       );
 
       await user.reauthenticateWithCredential(credential);
-
-      // Eliminar la cuenta
       await user.delete();
     }
   }
