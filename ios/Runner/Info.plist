@@ -67,6 +67,8 @@
 	</array>
 	<key>NSFaceIDUsageDescription</key>
 	<string>We need to use your Face ID to authenticate you</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera permission is required to scan QR codes.</string>
 	<key>GoogleService-Info</key>
 	<dict>
 		<key>CLIENT_ID</key>

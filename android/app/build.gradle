@@ -26,7 +26,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.example.login_signup_cuneta"
+    namespace "com.sonora.rrpp"
     compileSdkVersion 34
     ndkVersion flutter.ndkVersion
 
@@ -44,9 +44,10 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.login_signup_cuneta"
+        applicationId "com.sonora.rrpp"
         minSdkVersion 23
         targetSdkVersion 34
+        multiDexEnabled true
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }

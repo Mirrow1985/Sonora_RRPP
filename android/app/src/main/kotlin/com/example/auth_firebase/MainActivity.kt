@@ -1,4 +1,4 @@
-package com.example.login_signup_cuneta
+package com.sonora.rrpp
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 
