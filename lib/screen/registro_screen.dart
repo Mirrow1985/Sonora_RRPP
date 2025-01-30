@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'qr_generation_screen.dart';
+import 'flyer_screen.dart'; // Importa FlyerScreen
+import 'historial_registro.dart'; // Importa HistorialRegistroScreen
 
 class RegistroScreen extends StatefulWidget {
   final String universidad;
+  final String promocion;
 
-  const RegistroScreen({super.key, required this.universidad});
+  const RegistroScreen({super.key, required this.universidad, required this.promocion});
 
   @override
   RegistroScreenState createState() => RegistroScreenState();
@@ -18,6 +21,7 @@ class RegistroScreenState extends State<RegistroScreen> {
   String? selectedMonth;
   String? selectedYear;
   String? selectedFacultad;
+  String? selectedPromocion;
 
   final List<String> facultades = [
     'Facultad de Ciencias',
@@ -26,10 +30,25 @@ class RegistroScreenState extends State<RegistroScreen> {
     'Otra Facultad'
   ];
 
+  final List<String> promociones = [
+    '¡Cumplimos 16 años!',
+    'Promoción 2',
+    'Promoción 3',
+    'Otra Promoción'
+  ];
+
+  final Map<String, String> promocionImagenes = {
+    '¡Cumplimos 16 años!': 'assets/images/promocion_universidad.png',
+    'Promoción 2': 'assets/images/promocion_2.png',
+    'Promoción 3': 'assets/images/promocion_3.png',
+    'Otra Promoción': 'assets/images/otra_promocion.png',
+  };
+
   @override
   void initState() {
     super.initState();
     selectedFacultad = widget.universidad;
+    selectedPromocion = widget.promocion;
     nombreController.addListener(_capitalizeFirstLetter);
   }
 
@@ -54,7 +73,7 @@ class RegistroScreenState extends State<RegistroScreen> {
     final String nombre = nombreController.text;
     final String correo = correoController.text;
 
-    if (nombre.isEmpty || selectedDay == null || selectedMonth == null || selectedYear == null || correo.isEmpty) {
+    if (nombre.isEmpty || selectedDay == null || selectedMonth == null || selectedYear == null || correo.isEmpty || selectedPromocion == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Por favor, completa todos los campos.')),
@@ -85,7 +104,19 @@ class RegistroScreenState extends State<RegistroScreen> {
       'fechaNacimiento': fechaNacimiento,
       'correo': correo,
       'universidad': selectedFacultad,
+      'promocion': selectedPromocion,
       'fechaRegistro': FieldValue.serverTimestamp(),
+    });
+
+    // Guardar el registro en el historial
+    await FirebaseFirestore.instance.collection('historial_registros').add({
+      'nombre': nombre,
+      'fechaNacimiento': fechaNacimiento,
+      'correo': correo,
+      'universidad': selectedFacultad,
+      'promocion': selectedPromocion,
+      'fechaRegistro': FieldValue.serverTimestamp(),
+      'estadoEnvio': 'Enviado correctamente',
     });
 
     if (!mounted) return;
@@ -105,6 +136,7 @@ class RegistroScreenState extends State<RegistroScreen> {
         selectedMonth = null;
         selectedYear = null;
         selectedFacultad = widget.universidad;
+        selectedPromocion = widget.promocion;
       });
     });
   }
@@ -113,26 +145,71 @@ class RegistroScreenState extends State<RegistroScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Registro - ${widget.universidad}'),
+        title: Text('Registro'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HistorialRegistroScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text('Facultad seleccionada:'),
-            DropdownButton<String>(
-              value: selectedFacultad,
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedFacultad = newValue;
-                });
-              },
-              items: facultades.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Promoción seleccionada',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: selectedPromocion,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedPromocion = newValue;
+                    });
+                  },
+                  items: promociones.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Facultad seleccionada',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: selectedFacultad,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedFacultad = newValue;
+                    });
+                  },
+                  items: facultades.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
             SizedBox(height: 20),
             InputDecorator(
@@ -223,6 +300,23 @@ class RegistroScreenState extends State<RegistroScreen> {
             ElevatedButton(
               onPressed: registrarCliente,
               child: Text('Registrar'),
+            ),
+            SizedBox(height: 20),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FlyerScreen(imagePath: promocionImagenes[selectedPromocion] ?? 'assets/images/default.png'),
+                  ),
+                );
+              },
+              child: Image.asset(
+                promocionImagenes[selectedPromocion] ?? 'assets/images/default.png',
+                width: double.infinity,
+                height: 200,
+                fit: BoxFit.cover,
+              ),
             ),
           ],
         ),

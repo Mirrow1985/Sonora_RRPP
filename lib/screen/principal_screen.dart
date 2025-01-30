@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../screen/universidad_screen.dart';
-import '../screen/scanner_screen.dart'; // Asegúrate de importar ScannerScreen
+import 'promociones_screen.dart'; // Importa PromocionesScreen
+import 'scanner_screen.dart'; // Importa QRScannerScreen
+import 'historial_qrs.dart'; // Importa HistorialQrsScreen
 
 class PrincipalScreen extends StatelessWidget {
   const PrincipalScreen({super.key});
@@ -9,7 +10,7 @@ class PrincipalScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Principal Screen'),
+        title: Text('Principal'),
       ),
       body: Center(
         child: Column(
@@ -19,7 +20,9 @@ class PrincipalScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => SeleccionUniversidadScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => PromocionesScreen(),
+                  ),
                 );
               },
               child: Text('RRPP'),
@@ -29,10 +32,24 @@ class PrincipalScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => QRScannerScreen()), // Asegúrate de usar QRScannerScreen
+                  MaterialPageRoute(
+                    builder: (context) => QRScannerScreen(),
+                  ),
                 );
               },
-              child: Text('Scan QR Code'),
+              child: Text('Escanear QR'),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HistorialQrsScreen(),
+                  ),
+                );
+              },
+              child: Text('Historial QR\'s'),
             ),
           ],
         ),
