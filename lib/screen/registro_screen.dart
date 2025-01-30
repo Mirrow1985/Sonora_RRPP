@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'qr_generation_screen.dart';
-import 'flyer_screen.dart'; // Importa FlyerScreen
 import 'historial_registro.dart'; // Importa HistorialRegistroScreen
 
 class RegistroScreen extends StatefulWidget {
@@ -143,6 +142,9 @@ class RegistroScreenState extends State<RegistroScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final int currentYear = DateTime.now().year;
+    final List<String> years = List.generate(60 - 17 + 1, (index) => (currentYear - 17 - index).toString());
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Registro'),
@@ -273,13 +275,12 @@ class RegistroScreenState extends State<RegistroScreen> {
                         selectedYear = newValue;
                       });
                     },
-                    items: List.generate(100, (index) {
-                      final year = (DateTime.now().year - index).toString();
+                    items: years.map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
-                        value: year,
-                        child: Text(year),
+                        value: value,
+                        child: Text(value),
                       );
-                    }),
+                    }).toList(),
                   ),
                 ],
               ),
@@ -311,15 +312,52 @@ class RegistroScreenState extends State<RegistroScreen> {
                   ),
                 );
               },
-              child: Image.asset(
-                promocionImagenes[selectedPromocion] ?? 'assets/images/default.png',
-                width: double.infinity,
-                height: 200,
-                fit: BoxFit.cover,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Image.asset(
+                    promocionImagenes[selectedPromocion] ?? 'assets/images/default.png',
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                  ),
+                  Container(
+                    width: double.infinity,
+                    height: 200,
+                    color: Colors.black.withAlpha(128), // Reemplaza withOpacity(0.5) con withAlpha(128)
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Toca para ampliar',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class FlyerScreen extends StatelessWidget {
+  final String imagePath;
+
+  const FlyerScreen({super.key, required this.imagePath});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Flyer'),
+      ),
+      body: Center(
+        child: Image.asset(imagePath),
       ),
     );
   }

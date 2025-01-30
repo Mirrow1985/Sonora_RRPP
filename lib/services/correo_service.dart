@@ -30,8 +30,10 @@ class CorreoService {
       ..recipients.add(destinatario) // Destinatario
       ..subject = "¡Tus Flyers para Cervezas Gratis!" // Asunto
       ..html = '''
-        <h1>Hola $nombre,</h1>
+        <h1>Hola $nombre</h1>
+        <p>¡Cumplimos 16 años y queremos celebrarlo contigo!</p>
         <p>Aquí tienes tus códigos QR para canjear tus cervezas:</p>
+        <p>¡Recuerda que tienes hasta el 30 de junio para canjear los QRs!</p>
         <p><strong>QR 1:</strong> <img src="cid:qr1"></p>
         <p><strong>QR 2:</strong> <img src="cid:qr2"></p>
         <p>¡Disfruta!</p>

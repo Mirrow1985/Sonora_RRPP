@@ -59,7 +59,7 @@ class HistorialRegistroScreen extends StatelessWidget {
                       Text('Correo: $correo'),
                       Text('Fecha y Hora: $formattedFechaRegistro'),
                       SizedBox(height: 4.0),
-                      Text('Estado de envío: $estadoEnvio', style: TextStyle(color: Colors.green)),
+                      Text('Estado: $estadoEnvio', style: TextStyle(color: Colors.green)),
                     ],
                   ),
                 ),
